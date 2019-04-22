@@ -1,0 +1,13 @@
+1:	 SERF 1:	 start
+2:	 SERF 1:	 waits:	 0:	 1
+3:	 SERF 2:	 start
+4:	 SERF 2:	 waits:	 0:	 2
+5:	 SERF 3:	 start
+6:	 SERF 3:	 waits:	 0:	 3
+7:	 SERF 4:	 start
+8:	 SERF 4:	 waits:	 0:	 4
+9:	 SERF 1:	 member:	 0:	 0
+10:	 SERF 4:	 member:	 0:	 0
+11:	 SERF 4:	 boards:	 0:	 0
+12:	 SERF 2:	 member:	 0:	 0
+13:	 SERF 3:	 member:	 0:	 0
