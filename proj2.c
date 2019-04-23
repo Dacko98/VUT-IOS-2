@@ -17,6 +17,8 @@ sem_t *file_sem = NULL;
 sem_t *mutex = NULL;
 sem_t *hackerQueue = NULL;
 sem_t *serfQueue = NULL;
+sem_t *sem = NULL;
+sem_t *accessPier = NULL;
 
 FILE *output = NULL;
 
@@ -102,6 +104,8 @@ int set_mem()
     if ((file_sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
     if ((hackerQueue = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
     if ((serfQueue = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
+    if ((sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
+    if ((accessPier = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
 
    
     if (err == 0){
@@ -110,6 +114,8 @@ int set_mem()
     if (sem_init(mutex, 1, 1) == -1) err = -1;
     if (sem_init(hackerQueue, 1, 1) == -1) err = -1;
     if (sem_init(serfQueue, 1, 0) == -1) err = -1;
+    if (sem_init(sem, 1, 0) == -1) err = -1;
+    if (sem_init(accessPier, 1, 1) == -1) err = -1;
     }
 
     if (err == -1) {
@@ -145,6 +151,8 @@ int set_mem()
   if((operationNumber= shmat(SMoperationNumber, NULL, 0)) == NULL)
   { return -2; }
 
+  
+
   return 0;
 }
 
@@ -179,12 +187,16 @@ int close_sem()
     if(sem_destroy(mutex) != 0) { return -1; }
     if(sem_destroy(hackerQueue) != 0) { return -1; }
     if(sem_destroy(serfQueue) != 0) { return -1; }
+    if(sem_destroy(sem) != 0) { return -1; }
+    if(sem_destroy(accessPier) != 0) { return -1; }
 
     munmap(serfId,sizeof(sem_t));
     munmap(file_sem,sizeof(sem_t));
     munmap(mutex,sizeof(sem_t));
     munmap(hackerQueue,sizeof(sem_t));
     munmap(serfQueue,sizeof(sem_t));
+    munmap(sem,sizeof(sem_t));
+    munmap(accessPier,sizeof(sem_t));
     return 0;
 }
 
@@ -208,62 +220,91 @@ int serf_live(int pierCapacity, int returnTime, int cruiseTime)
 
     while(1){
         printf("%d, %d, %d\n", *serfsPier, *hackersPier, pierCapacity);
-        sem_wait(mutex);
+
+        sem_wait(accessPier);
         if(((*serfsPier)+(*hackersPier))<pierCapacity){
             (*serfsPier)++;
+            sem_post(accessPier);
             sem_wait(file_sem);
             (*operationNumber)++;
             fprintf(output, "%d:\t SERF %d:\t waits:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
             fflush(output); 
             sem_post(file_sem);
 
+            sem_wait(mutex);
             if(*serfsPier==4){
                 *serfsPier =0;
+                sem_wait(file_sem);
+                (*operationNumber)++;
+                fprintf(output, "%d:\t SERF %d:\t boards:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
+                fflush(output); 
+                sem_post(file_sem);
+                usleep(rand()%cruiseTime*1000);
+
                 sem_post(serfQueue);
                 sem_post(serfQueue);
                 sem_post(serfQueue);
                 sem_post(serfQueue);
                 isCaptain = true;
             } else if(*serfsPier==2 && *hackersPier >=2){
-                sem_post(serfQueue);
-                sem_post(serfQueue);
-                sem_post(hackerQueue);
-                sem_post(hackerQueue);
                 *serfsPier =0;
                 *hackersPier -=2;
+                sem_wait(file_sem);
+                (*operationNumber)++;
+                fprintf(output, "%d:\t SERF %d:\t boards:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
+                fflush(output); 
+                sem_post(file_sem);
+                usleep(rand()%cruiseTime*1000);
+
+                sem_post(serfQueue);
+                sem_post(serfQueue);
+                sem_post(hackerQueue);
+                sem_post(hackerQueue);
+
                 isCaptain = true;
             } else {
                 sem_post(mutex);
             }
             sem_wait(serfQueue);
 
-            sem_wait(file_sem);
-                (*operationNumber)++;
-                fprintf(output, "%d:\t SERF %d:\t member:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
-                fflush(output); 
-                sem_post(file_sem);
 
-            if(isCaptain){
+            /*if (!isCaptain){
                 sem_wait(file_sem);
                 (*operationNumber)++;
-                fprintf(output, "%d:\t SERF %d:\t boards:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
+                fprintf(output, "%d:\t SERF %d:\t member exits:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
                 fflush(output); 
                 sem_post(file_sem);
+                sem_post(sem);
+            } else {
+                sem_wait(sem);
+                sem_wait(sem);
+                sem_wait(sem);
 
-                usleep(rand()%cruiseTime*1000);
-
+                sem_wait(file_sem);
+                (*operationNumber)++;
+                fprintf(output, "%d:\t SERF %d:\t captain exits:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
+                fflush(output); 
+                sem_post(file_sem);
                 sem_post(mutex);
             }
-            
+*/
             break;
 
         } else {
+            sem_post(accessPier);
             sem_wait(file_sem);
             (*operationNumber)++;
             fprintf(output, "%d:\t SERF %d:\t leaves queue:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
             fflush(output); 
             sem_post(file_sem);
+
             usleep(rand()%returnTime*1000);
+
+            sem_wait(file_sem);
+            (*operationNumber)++;
+            fprintf(output, "%d:\t SERF %d:\t is back:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
+            fflush(output); 
+            sem_post(file_sem);
 
         }
     }
