@@ -13,23 +13,10 @@
 13:	 SERF 6:	 waits:	 0:	 2
 14:	 SERF 7:	 start
 15:	 SERF 7:	 waits:	 0:	 3
-16:	 SERF 1:	 member exits:	 0:	 3
-17:	 SERF 3:	 member exits:	 0:	 3
-18:	 SERF 2:	 member exits:	 0:	 3
-19:	 SERF 4:	 captain exits:	 0:	 3
-20:	 SERF 8:	 start
-21:	 SERF 8:	 waits:	 0:	 4
-22:	 SERF 8:	 boards:	 0:	 0
-23:	 SERF 9:	 start
-24:	 SERF 9:	 waits:	 0:	 1
-25:	 SERF 10:	 start
-26:	 SERF 10:	 waits:	 0:	 2
-27:	 SERF 11:	 start
-28:	 SERF 11:	 waits:	 0:	 3
-29:	 SERF 12:	 start
-30:	 SERF 12:	 waits:	 0:	 4
-31:	 SERF 5:	 member exits:	 0:	 4
-32:	 SERF 6:	 member exits:	 0:	 4
-33:	 SERF 7:	 member exits:	 0:	 4
-34:	 SERF 8:	 captain exits:	 0:	 4
-35:	 SERF 9:	 boards:	 0:	 0
+16:	 SERF 8:	 start
+17:	 SERF 8:	 waits:	 0:	 4
+18:	 SERF 1:	 member exits:	 0:	 4
+19:	 SERF 3:	 member exits:	 0:	 4
+20:	 SERF 2:	 member exits:	 0:	 4
+21:	 SERF 4:	 captain exits:	 0:	 4
+22:	 SERF 5:	 boards:	 0:	 0

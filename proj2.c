@@ -34,6 +34,10 @@ int *hackersPier= NULL;
 int SMoperationNumber;
 int *operationNumber= NULL;
 
+int SMbarrier;
+int *barrier= NULL;
+
+int write_to_file(bool person, char *text, int ID);
 int set_mem();
 int clear_mem();
 int close_sem();
@@ -50,7 +54,6 @@ void serfGenerator(int serfsTime, int personsCount, int pierCapacity, int return
         if(serfsTime != 0){
         usleep(rand()%serfsTime*1000);
     }
-        printf("personCount %d\n",personsCount);  
     // Vytvori proces
     riderPID = fork();
     // Ak sa fork() nepodaril
@@ -97,7 +100,6 @@ void serfGenerator(int serfsTime, int personsCount, int pierCapacity, int return
 
 int set_mem()
 {
-  
     int err = 0;
     if ((serfId = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
     if ((mutex = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
@@ -107,7 +109,17 @@ int set_mem()
     if ((sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
     if ((accessPier = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, 0, 0)) == MAP_FAILED) err = -1;
 
-   
+
+
+       /*
+    if((serfId= sem_open("/serfId", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+    if((mutex = sem_open("/mutex", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+    if((file_sem= sem_open("/file_sem", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+    if((hackerQueue = sem_open("/hackerQueue", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+    if((serfQueue= sem_open("/serfQueue", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+    if((sem= sem_open("/sem", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+    if((accessPier= sem_open("/accessPier", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED) err = -1; 
+*/
     if (err == 0){
     if (sem_init(serfId, 1, 1) == -1) err = -1;
     if (sem_init(file_sem, 1, 1) == -1) err = -1;
@@ -151,6 +163,12 @@ int set_mem()
   if((operationNumber= shmat(SMoperationNumber, NULL, 0)) == NULL)
   { return -2; }
 
+  if((SMbarrier= shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0666)) == -1)
+  { return -2; }
+
+  if((barrier= shmat(SMbarrier, NULL, 0)) == NULL)
+  { return -2; }
+
   
 
   return 0;
@@ -172,6 +190,9 @@ int clear_mem()
         return -2; 
     }
     if(shmctl(SMoperationNumber, IPC_RMID, NULL) == -1){
+        return -2; 
+    }
+    if(shmctl(SMbarrier, IPC_RMID, NULL) == -1){
         return -2; 
     }
   return 0;
@@ -216,20 +237,21 @@ int serf_live(int pierCapacity, int returnTime, int cruiseTime)
     sem_post(file_sem);
 
 
+    //write_to_file(false, "start", ID);
     bool isCaptain = false;
 
     while(1){
-        printf("%d, %d, %d\n", *serfsPier, *hackersPier, pierCapacity);
-
         sem_wait(accessPier);
         if(((*serfsPier)+(*hackersPier))<pierCapacity){
             (*serfsPier)++;
-            sem_post(accessPier);
             sem_wait(file_sem);
             (*operationNumber)++;
             fprintf(output, "%d:\t SERF %d:\t waits:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
             fflush(output); 
             sem_post(file_sem);
+            sem_post(accessPier);
+
+          
 
             sem_wait(mutex);
             if(*serfsPier==4){
@@ -249,11 +271,6 @@ int serf_live(int pierCapacity, int returnTime, int cruiseTime)
             } else if(*serfsPier==2 && *hackersPier >=2){
                 *serfsPier =0;
                 *hackersPier -=2;
-                sem_wait(file_sem);
-                (*operationNumber)++;
-                fprintf(output, "%d:\t SERF %d:\t boards:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
-                fflush(output); 
-                sem_post(file_sem);
                 usleep(rand()%cruiseTime*1000);
 
                 sem_post(serfQueue);
@@ -265,17 +282,46 @@ int serf_live(int pierCapacity, int returnTime, int cruiseTime)
             } else {
                 sem_post(mutex);
             }
+
             sem_wait(serfQueue);
 
 
-            /*if (!isCaptain){
+            if (!isCaptain){
                 sem_wait(file_sem);
                 (*operationNumber)++;
                 fprintf(output, "%d:\t SERF %d:\t member exits:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
                 fflush(output); 
                 sem_post(file_sem);
+            }
+
+
+            sem_wait(file_sem);
+            (*barrier)--;
+  
+
+            if(*barrier == 0){
+               
                 sem_post(sem);
-            } else {
+                sem_post(sem);
+                sem_post(sem);
+                sem_post(sem);
+            }
+            sem_post(file_sem);
+            sem_wait(sem);
+            
+             if (isCaptain){
+                sem_wait(file_sem);
+                (*operationNumber)++;
+                fprintf(output, "%d:\t SERF %d:\t captain exits:\t %d:\t %d\n",*operationNumber, ID, *hackersPier, *serfsPier);
+                fflush(output);
+                *barrier=4;
+                sem_post(file_sem);
+                sem_post(mutex);
+                
+            }
+                
+
+            /* else {
                 sem_wait(sem);
                 sem_wait(sem);
                 sem_wait(sem);
@@ -286,8 +332,8 @@ int serf_live(int pierCapacity, int returnTime, int cruiseTime)
                 fflush(output); 
                 sem_post(file_sem);
                 sem_post(mutex);
-            }
-*/
+            }*/
+
             break;
 
         } else {
@@ -317,7 +363,7 @@ int serf_live(int pierCapacity, int returnTime, int cruiseTime)
 int main(int argc, char const *argv[]){
     int personsCount, hackersTime, serfsTime, cruiseTime, returnTime, pierCapacity;
     char *stringValue;
-    
+    printf("sem\n");
 
     if (argc != 7){
         fprintf(stderr, "Wrong number of parameters\n");
@@ -363,7 +409,6 @@ int main(int argc, char const *argv[]){
      setlinebuf(output);
     
     if(set_mem() != 0){
-        printf("tu\n");
         fprintf(stderr, "Problem with memory allocation\n");
         return -2;
     };
@@ -372,7 +417,7 @@ int main(int argc, char const *argv[]){
     *serfsPier = 0;
     *hackersPier = 0;
     *serfIdcount= 1;
-
+    *barrier=4;
     /* pid_t serfPID = 0;
 
     serfPID = fork();
@@ -390,5 +435,20 @@ int main(int argc, char const *argv[]){
         fprintf(stderr, "Problem with closing semaphores\n");
         return -2;
     }
+    return 0;
+}
+
+int write_to_file(bool person, char *text, int ID){
+    //printf("tu");
+
+    sem_wait(file_sem);
+    (*operationNumber)++;
+    if(person){
+         fprintf(output, "%d:\t HACK %d:\t %s:\t %d:\t %d\n",*operationNumber, ID,*text, *hackersPier, *serfsPier);
+    } else {
+        fprintf(output, "%d:\t SERF %d:\t %s:\t %d:\t %d\n",*operationNumber, ID, *text, *hackersPier, *serfsPier);
+    }
+    //fflush(output); 
+    sem_post(file_sem);
     return 0;
 }
