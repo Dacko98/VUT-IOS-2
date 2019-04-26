@@ -1,4 +1,4 @@
-#include "proj2.2.h"
+#include "proj2.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
