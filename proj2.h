@@ -25,7 +25,7 @@ typedef struct param
 //struktura pre samafory
 typedef struct sem{
     sem_t *mutex;
-    sem_t *write;
+    sem_t *semWrite;
     sem_t *accessPier;
     sem_t *serfQueue;
     sem_t *hackerQueue;
@@ -69,3 +69,7 @@ void handleError(int error);
 int generatePersons(parameters *param, semaphores *sem, sharedMemory *mem, bool isHacker);
 
 int personLive(parameters *param, semaphores *sem, sharedMemory *mem, bool isHacker);
+
+int personWalkH(parameters *param, semaphores *sem, sharedMemory *mem);
+
+int personWalkS(parameters *param, semaphores *sem, sharedMemory *mem);
