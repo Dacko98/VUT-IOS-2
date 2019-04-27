@@ -5,7 +5,7 @@
 
 ME=`whoami`
 
-PROJECT="proj2"
+PROJECT="proj3"
 if [ ! -z "$1" ];
 then
    PROJECT="$1"

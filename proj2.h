@@ -64,9 +64,11 @@ int clearMem(semaphores *semaphores, sharedMemory *memory);
 
 int allocMem(semaphores *semaphores, sharedMemory *memory);
 
-void handleError(int error);
+void handleError(int error, semaphores *semaphores, sharedMemory *memory);
 
-int generatePersons(parameters *param, semaphores *sem, sharedMemory *mem, bool isHacker);
+int generatePersonsS(parameters *param, semaphores *sem, sharedMemory *mem);
+
+int generatePersonsH(parameters *param, semaphores *sem, sharedMemory *mem);
 
 int personLive(parameters *param, semaphores *sem, sharedMemory *mem, bool isHacker);
 
