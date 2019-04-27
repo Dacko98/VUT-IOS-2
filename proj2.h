@@ -70,8 +70,6 @@ int generatePersonsS(parameters *param, semaphores *sem, sharedMemory *mem);
 
 int generatePersonsH(parameters *param, semaphores *sem, sharedMemory *mem);
 
-int personLive(parameters *param, semaphores *sem, sharedMemory *mem, bool isHacker);
-
 int personWalkH(parameters *param, semaphores *sem, sharedMemory *mem);
 
 int personWalkS(parameters *param, semaphores *sem, sharedMemory *mem);

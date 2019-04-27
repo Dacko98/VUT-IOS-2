@@ -1,4 +1,4 @@
-#include "proj2.2.h"
+#include "proj2.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     errCode= procesParam(argc, argv, &param);
     if (errCode !=0){
         handleError(errCode, &sem, &mem);
-        return -1;
+        return 1;
     }
 
     *mem.operationNumber = 0;
@@ -176,16 +176,22 @@ int procesParam(int argc, char *argv[], parameters *param){
     } else {
         param->personsCount = strtol(argv[1], &stringValue, 10);
         if (stringValue[0] != '\0') return -2;
+        if(param->personsCount<2 || (param->personsCount%2==1)) return -8;
         param->hackersTime = strtol(argv[2], &stringValue, 10);
         if (stringValue[0] != '\0') return -2;
+        if(param->hackersTime<0 || param->hackersTime>2000) return -8;
         param->serfsTime = strtol(argv[3], &stringValue, 10);
         if (stringValue[0] != '\0') return -2;
+        if(param->serfsTime<0 || param->serfsTime>2000) return -8;
         param->cruiseTime = strtol(argv[4], &stringValue, 10);
         if (stringValue[0] != '\0') return -2;
+        if(param->cruiseTime<0 || param->cruiseTime>2000) return -8;
         param->returnTime = strtol(argv[5], &stringValue, 10);
         if (stringValue[0] != '\0') return -2;
+        if(param->returnTime<20 || param->returnTime>2000) return -8;
         param->pierCapacity = strtol(argv[6], &stringValue, 10);
         if (stringValue[0] != '\0') return -2;
+        if(param->pierCapacity<5) return -8;
     }
 
     return 0;
@@ -270,149 +276,6 @@ int generatePersonsH(parameters *param, semaphores *sem, sharedMemory *mem){
     wait(NULL); 
     exit(0);
 }
- /* 
-int personLive(parameters *param, semaphores *sem, sharedMemory *mem, bool isHacker){
-  
-    fprintf(output, "t");
-    int *idCount;
-    int *actualPersonPier;
-    int *otherPersonPier;
-    int *actualPersonBoard;
-    int *otherPersonBoard;
-    sem_t *actualPersonQueue;
-    sem_t *otherPersonQueue;
-    char *txt = "0";
-
-    if(isHacker){
-        idCount = mem->hackerIdcount;
-        actualPersonPier = mem->hackersPier;
-        otherPersonPier = mem->serfsPier;
-        actualPersonBoard = mem->hackerBoard;
-        otherPersonBoard = mem->serfBoard;
-        actualPersonQueue = sem->hackerQueue;
-        otherPersonQueue = sem->serfQueue ;
-
-    } else {
-        idCount = mem->serfIdcount;
-        actualPersonPier = mem->serfsPier;
-        otherPersonPier = mem->hackersPier;
-        actualPersonBoard = mem->serfBoard;
-        otherPersonBoard = mem->hackerBoard;
-        actualPersonQueue = sem->serfQueue;
-        otherPersonQueue = sem->hackerQueue;
-    }
-
-
-    sem_wait(sem->semWrite);
-    //printf("%s", txt);
-    int ID = (*idCount)++;
-    sem_post(sem->semWrite);
-
-        sem_wait(sem->semWrite);
-        fprintf(output, "%d:\t %d:\t start:\t :\t %d\n",++(*mem->operationNumber), *mem->hackersPier, *mem->serfsPier);
-        sem_post(sem->semWrite);
-
-    bool isCaptain = false;
-
-    while(1){
-        sem_wait(sem->accessPier);
-        if(((*actualPersonPier)+(*otherPersonPier))<param->pierCapacity){
-            (*actualPersonPier)++;
-
-            sem_post(sem->accessPier);
-
-            sem_wait(sem->semWrite);
-            fprintf(output, "%d:\t %s %d:\t waits:\t %d:\t %d\n",++(*mem->operationNumber), *txt, ID, *mem->hackersPier, *mem->serfsPier);
-            fflush(output); 
-            sem_post(sem->semWrite);
-          
-
-            sem_wait(sem->mutex);
-            if(++(*actualPersonBoard)==4){
-                *actualPersonPier =0;
-                *actualPersonBoard=0;
-                sem_wait(sem->semWrite);
-                fprintf(output, "%d:\t %s %d:\t boards:\t %d:\t %d\n",++(*mem->operationNumber), *txt, ID, *mem->hackersPier, *mem->serfsPier);
-                fflush(output); 
-                sem_post(sem->semWrite);
-
-                usleep(rand()%param->cruiseTime*1000);
-
-                sem_post(actualPersonQueue);
-                sem_post(actualPersonQueue);
-                sem_post(actualPersonQueue);
-                sem_post(actualPersonQueue);
-                isCaptain = true;
-            } else if(*actualPersonBoard==2 && *otherPersonBoard >=2){
-                *actualPersonPier =0;
-                *otherPersonPier-=2;
-                usleep(rand()%param->cruiseTime*1000);
-
-                sem_post(actualPersonQueue);
-                sem_post(actualPersonQueue);
-                sem_post(otherPersonQueue);
-                sem_post(otherPersonQueue);
-
-                isCaptain = true;
-            } else {
-                
-                sem_post(sem->mutex);
-            }
-
-            sem_wait(actualPersonQueue);
-
-
-            if (!isCaptain){
-                sem_wait(sem->semWrite);
-                fprintf(output, "%d:\t %s %d:\t member exits:\t %d:\t %d\n",++(*mem->operationNumber), *txt, ID, *mem->hackersPier, *mem->serfsPier);
-                fflush(output); 
-                sem_post(sem->semWrite);
-            }
-
-
-            sem_wait(sem->semWrite);
-            *(mem->barrier)--;
-  
-            if(*(mem->barrier) == 0){
-               
-                sem_post(sem->barrier);
-                sem_post(sem->barrier);
-                sem_post(sem->barrier);
-                sem_post(sem->barrier);
-            }
-            sem_post(sem->semWrite);
-            sem_wait(sem->barrier);
-            
-             if (isCaptain){
-                sem_wait(sem->semWrite);
-                fprintf(output, "%d:\t %s %d:\t captain exits:\t %d:\t %d\n",++(*mem->operationNumber), *txt, ID, *mem->hackersPier, *mem->serfsPier);
-                fflush(output); 
-                (*mem->barrier)=4;
-                sem_post(sem->semWrite);
-                sem_post(sem->mutex);
-                
-            }
-
-            break;
-
-        } else {
-            sem_post(sem->accessPier);
-            sem_wait(sem->semWrite);
-            fprintf(output, "%d:\t %s %d:\t leaves queue:\t %d:\t %d\n",++(*mem->operationNumber), *txt, ID, *mem->hackersPier, *mem->serfsPier);
-            fflush(output); 
-            sem_post(sem->semWrite);
-
-            usleep(rand()%param->returnTime*1000);
-
-            sem_wait(sem->semWrite);
-            fprintf(output, "%d:\t %s %d:\t is back:\t %d:\t %d\n",++(*mem->operationNumber), *txt, ID, *mem->hackersPier, *mem->serfsPier);
-            fflush(output); 
-            sem_post(sem->semWrite);
-
-        }
-    }
-    exit(0);
-}*/
 
 
 int personWalkS(parameters *param, semaphores *sem, sharedMemory *mem){
@@ -422,7 +285,7 @@ int personWalkS(parameters *param, semaphores *sem, sharedMemory *mem){
     sem_post(sem->semWrite);
 
     sem_wait(sem->semWrite);
-    fprintf(output, "%d:\t SERF %d:\t start:\t\n",++(*mem->operationNumber),ID);
+    fprintf(output, "%d:\t SERF %d:\t starts\t\n",++(*mem->operationNumber),ID);
      fflush(output); 
     sem_post(sem->semWrite);
 
@@ -444,9 +307,10 @@ int personWalkS(parameters *param, semaphores *sem, sharedMemory *mem){
 
             sem_wait(sem->mutex);
             if(++(*(mem->serfBoard))==4){
+                
+                sem_wait(sem->semWrite);
                 *(mem->serfsPier) -=4;
                 *(mem->serfBoard)=0;
-                sem_wait(sem->semWrite);
                 fprintf(output, "%d:\t SERF %d:\t boards:\t %d:\t %d\n",++(*mem->operationNumber), ID, *mem->hackersPier, *mem->serfsPier);
                 fflush(output); 
                 sem_post(sem->semWrite);
@@ -459,11 +323,11 @@ int personWalkS(parameters *param, semaphores *sem, sharedMemory *mem){
                 sem_post(sem->serfQueue);
                 isCaptain = true;
             } else if((*(mem->serfBoard)==2 )&&( *(mem->hackerBoard) >=2)){
+                sem_wait(sem->semWrite);
                 *(mem->serfsPier) -=2;
                 *(mem->serfBoard)=0;
                 *(mem->hackerBoard)-=2;
                 *(mem->hackersPier)-=2;
-                sem_wait(sem->semWrite);
                 fprintf(output, "%d:\t SERF %d:\t boards:\t %d:\t %d\n",++(*mem->operationNumber), ID, *mem->hackersPier, *mem->serfsPier);
                 fflush(output); 
                 sem_post(sem->semWrite);
@@ -542,7 +406,7 @@ int personWalkH(parameters *param, semaphores *sem, sharedMemory *mem){
 
 
     sem_wait(sem->semWrite);
-    fprintf(output, "%d:\t HACK %d:\t start\n",++(*mem->operationNumber),ID);
+    fprintf(output, "%d:\t HACK %d:\t starts\n",++(*mem->operationNumber),ID);
     fflush(output); 
     sem_post(sem->semWrite);
 
@@ -561,9 +425,10 @@ int personWalkH(parameters *param, semaphores *sem, sharedMemory *mem){
 
             sem_wait(sem->mutex);
             if(++(*(mem->hackerBoard))==4){
+                
+                sem_wait(sem->semWrite);
                 *(mem->hackersPier) -=4;
                 *(mem->hackerBoard)=0;
-                sem_wait(sem->semWrite);
                 fprintf(output, "%d:\t HACK %d:\t boards:\t %d:\t %d\n",++(*mem->operationNumber), ID, *mem->hackersPier, *mem->serfsPier);
                 fflush(output); 
                 sem_post(sem->semWrite);
@@ -576,11 +441,12 @@ int personWalkH(parameters *param, semaphores *sem, sharedMemory *mem){
                 sem_post(sem->hackerQueue);
                 isCaptain = true;
             } else if((*(mem->hackerBoard)==2 )&&( *(mem->serfBoard) >=2)){
+                
+                sem_wait(sem->semWrite);
                 *(mem->hackersPier) -=2;
                 *(mem->hackerBoard) =0;
                 *(mem->serfBoard)-=2;
                 *(mem->serfsPier)-=2;
-                sem_wait(sem->semWrite);
                 fprintf(output, "%d:\t HACK %d:\t boards:\t %d:\t %d\n",++(*mem->operationNumber), ID, *mem->hackersPier, *mem->serfsPier);
                 fflush(output); 
                 sem_post(sem->semWrite);
